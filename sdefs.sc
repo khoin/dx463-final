@@ -68,3 +68,10 @@ SynthDef(\pshift, { |in, out, wet|
 		PitchShift.ar(In.ar(in, 2), pitchRatio: 0.25*[3/2, 4/3, 5/4, 5], mul: (15.dbamp) * In.kr(wet));
 	)
 }).add;
+
+// -- Playbacker
+
+SynthDef(\pb, { |out, buf|
+	var sig = PlayBuf.ar(1, buf, doneAction: 2);
+	Out.ar(0, sig);
+}).add;
