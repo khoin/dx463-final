@@ -23,12 +23,12 @@ KMap {
 KSpectro {
 	const logFac = 20;
 
-	var ugen,
+	var ugens,
 		fftSize,
 		dbRange;
 
 	var uv,
-		fftResult,
+		fftResults,
 		fftOSCFunc,
 		freqDict,
 		freqOSCFunc;
@@ -40,10 +40,14 @@ KSpectro {
 	init {
 		uv			= UserView();
 
-		fftResult	= Array.fill(fftSize, 0);
+		fftResults	= Dictionary.new;
 		fftOSCFunc	= OSCFunc(
 			func:			{ |msg|
-				fftResult.put(msg[2], msg[3]);
+				fftResults.atFail(msg[1], {
+					fftResults.put(msg[1], Array.fill(fftSize, 0));
+				});
+				fftResults[msg[1]].put(msg[2], msg[3]);
+
 			},
 			path: '/spectro',
 			srcID: Server.default.addr
@@ -93,23 +97,25 @@ KSpectro {
 				Pen.stroke;
 			});
 
-			// Draw Spectrogram
-			Pen.strokeColor = Color.green;
-			Pen.moveTo( 0 @ h );
+			// Draw Spectrograms
+			fftResults.values.do({ |result, i|
+				Pen.strokeColor = Color.hsv(0.3+i*0.2%1, 1, 1);
+				Pen.moveTo( 0 @ h );
 
-			fftResult.do({ |val, ind|
-				Pen.lineTo(
-					(KMap.toLog(ind/fftResult.size, logFac) * w)
-					@
-					// FFT doesn't seem to be 0-1, I don't know what's the max. 130 for now.
-					((1-KMap.toDb(val/130, dbRange)) * h)
-				);
+				result.do({ |val, ind|
+					Pen.lineTo(
+						(KMap.toLog(ind/fftSize, logFac) * w)
+						@
+						// FFT doesn't seem to be 0-1, I don't know what's the max. 130 for now.
+						((1-KMap.toDb(val/130, dbRange)) * h)
+					);
+				});
+				Pen.stroke;
 			});
 
-			Pen.stroke;
 
 			// Draw Band Detectors
-			Pen.strokeColor = Color.red;
+			Pen.strokeColor = Color.cyan;
 			freqDict.keysValuesDo({ |key, val|
 				Pen.line(
 					(KMap.toLog((key * 2 / sR), logFac) * w )
@@ -123,7 +129,7 @@ KSpectro {
 			});
 
 			// Ask the analyzer for FFT Result.
-			ugen.set(\t_trigger, 1);
+			ugens.do(_.set(\t_trigger, 1));
 		}
 	}
 }
