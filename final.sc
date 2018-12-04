@@ -40,20 +40,27 @@
 				params: [\delay, 0.0, \amp, 10.dbamp]
 			),
 			(
-				type: \pshift, name: \ps1
+				type: \fork, name: \ps1,
+				params: [\ctrl1, KTBus(\f1), \ctrl2, KTBus(\f2), \ctrl3, KTBus(\f3), \ctrl4, KTBus(\f4)]
 			),
 			(
-				type: \reverb, name: \rev, params: [\shimmerPitch, 99/100, \decayRate, 0.09]
+				type: \reverb, name: \rev, params: [\shimmerPitch, 99/100, \decayRate, 0.87]
 			)
 		]
 	),
 	(
 		type: \group,
-		name: \realTime1,
+		name: \bells,
 		children: [
 			(
-				type: \sin,
-				params: [\freq, 450]
+				type: \mic,
+				params: [\delay, 0.0, \amp, 10.dbamp]
+			),
+			(
+				type: \bells, name: \bell
+			),
+			(
+				type: \reverb, params: [\decayRate, 0.3]
 			)
 		]
 	),
@@ -71,15 +78,13 @@
 						type: \sin, name: \s2, outSibling: true, params: [\freq, 1000]
 					)
 				]
-			),
-			(
-				type: \reverb
 			)
 		]
 	)
 ];
 
 ~fftLength = 2.pow(8);
+s.options.memSize = 2.pow(15);
 s.waitForBoot({
 	"sdefs.sc".loadRelative;
 });
@@ -96,11 +101,12 @@ var winWidth			= 700,
 	).background_(Color.grey);
 var phone				= Canvas3D().distance_(2),
 	phoneAccel			= [0, 0, 0],
+	phonePR				= [0, 0],
 	phoneListener		;
 
 var tree				= KTree(~tree);
 var selector			= Synth.after(tree.masterGroup, \select, [
-	\in, [tree.buses[\blowey], tree.buses[\realTime1], tree.buses[\testScene]],
+	\in, [tree.buses[\blowey], tree.buses[\bells], tree.buses[\testScene]],
 	\out, 0
 ]);
 
@@ -108,15 +114,8 @@ var masterAnalyzer		= Synth.after(selector, \spectro, [\in, 0]);
 var micAnalyzer			= Synth.after(selector, \spectro, [\in, tree.buses[\rawMic]]);
 var index = 0;
 
-tree.synths[\ps1].set(
-	\ctrl1, tree.buses[\f1],
-	\ctrl2, tree.buses[\f2],
-	\ctrl3, tree.buses[\f3],
-	\ctrl4, tree.buses[\f4]
-);
-
 win.layout = VLayout(
-	KSpectro([masterAnalyzer, micAnalyzer], ~fftLength, 80),
+	KSpectro([masterAnalyzer, micAnalyzer], ~fftLength, dbRange: 80),
 	HLayout(
 		[phone, s: 1],
 		[nil, s: 2]
@@ -129,39 +128,35 @@ win.onClose				= {
 
 phoneListener = OSCFunc({ |msg|
 	phoneAccel = msg.copyRange(1, 3);
-}, '/accxyz', NetAddr("10.18.254.234", 8000), 9000);
-
-phone.add(Canvas3DItem.cube.transform(Canvas3D.mScale(0.4, 0.8, 0.2)));
-
-phone.animate(40, { |t|
 
 	// Determining Roll, Pitch from accelerometer:
 	// https://stackoverflow.com/a/30195572/2076075
 	// Which based on this paper:
 	// https://www.nxp.com/files-static/sensors/doc/app_note/AN3461.pdf
 
-	var roll = phoneAccel[1].atan2(phoneAccel[2].sign * phoneAccel[2].hypot(0.032*phoneAccel[0]));
-	var pitch = (-1 * phoneAccel[0]).atan2(phoneAccel[1].hypot(phoneAccel[2]));
+	// pitch: -pi to pi
+	// roll: -pi/2 to pi/2
+	phonePR[1] = (-1 * phoneAccel[0]).atan2(phoneAccel[1].hypot(phoneAccel[2]));
+	phonePR[0] = phoneAccel[1].atan2(phoneAccel[2].sign * phoneAccel[2].hypot(0.032*phoneAccel[0]));
 
-	tree.synths[\s1].set(\freq, 1840 + (sin(roll) * 1020));
-	tree.synths[\s2].set(\freq, 1840*1.49 + (sin(pitch) * 920));
+	tree.synths[\bell].set(\pitch, phonePR[0], \roll, phonePR[1]);
+}, '/accxyz', NetAddr("10.18.254.234", 8000), 9000);
 
-	//tree.synths[\rev].set(\shimmerPitch, 1 + ((pitch)/2pi));
+phone.add(Canvas3DItem.cube.transform(Canvas3D.mScale(0.4, 0.8, 0.2)));
 
+phone.animate(40, { |t|
 	phone.transforms = [
-		Canvas3D.mRotateY(pitch),
-		Canvas3D.mRotateX(pi/2 + roll)
+		Canvas3D.mRotateY(phonePR[1]),
+		Canvas3D.mRotateX(pi/2 + phonePR[0])
 	];
 });
 
 win.view.keyDownAction = { |v, char|
 	if($ == char, {
-		selector.set(\index, index % 3);
 		index = index + 1;
+		selector.set(\index, index % 3);
 	});
 };
-
-// Properties
 
 
 // Event Handlers
@@ -173,6 +168,6 @@ CmdPeriod.doOnce({
 
 
 // And... Go!
-win.alwaysOnTop			= true;
+win.alwaysOnTop	= true;
 win.front;
 )

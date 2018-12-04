@@ -1,3 +1,10 @@
+KTBus {
+	var <name;
+	*new { |name|
+		^super.newCopyArgs(name);
+	}
+}
+
 KTree {
 	var masterGroup;
 
@@ -42,6 +49,11 @@ KTree {
 
 					synth.set(\in, previousBus);
 					synth.set(\out, outBus);
+					child.params.do({ |item, i|
+						if (item.isKindOf(KTBus)) {
+							child.params[i] = buses[item.name];
+						}
+					});
 					synth.set(*child.params);
 
 					previousBus = if (child.inSibling == true) {previousBus} {outBus};

@@ -65,7 +65,7 @@ SynthDef(\freqAmp, { |in, out, freq = 440, rq = 0.008|
 					rq
 				)
 			),
-			lagTime: 0.5
+			lagTime: 0.1
 		);
 
 	Out.kr(out, signal);
@@ -76,12 +76,11 @@ SynthDef(\freqAmp, { |in, out, freq = 440, rq = 0.008|
 	);
 }).add;
 
-// -- Pitchshift
-SynthDef(\pshift, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
+// -- Fork
+SynthDef(\fork, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 
 	var outsig = 0;
-	var c1, c2, c3, c4, o1, o2, o3, o4;
-	var m, steppy;
+	var c1, c2, c3, c4, o1, o2, o3, o4, m;
 	c1 = In.kr(ctrl1);
 	c2 = In.kr(ctrl2);
 	c3 = In.kr(ctrl3);
@@ -98,18 +97,22 @@ SynthDef(\pshift, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 
 	o2 = Mix.ar(SinOsc.ar(1204 * [2/3, 1/4, 3/8, 3/2, 1/16],
 		c2 * In.ar(in, 2) * SinOsc.ar(1, 0, 8, 10),
-		-40.dbamp));
+		-30.dbamp));
 
-	o3 = BLowShelf.ar(
+	o3 = BLowShelf.ar(PitchShift.ar(
+			In.ar(in, 2),
+			pitchRatio: [1/2, 5/12, 1/6, 1/9]*2 ! 2,
+			mul: 5.dbamp * c3
+	), 800, 1, 5);
+
+	o4 = BLowShelf.ar(
 			PitchShift.ar(
 				In.ar(in, 2),
-				pitchRatio: [1/2, 5/12, 1/6, 1/9, 1/18]*2 ! 2,
-			mul: 5.dbamp * c3),
-			300, db: 5
+				pitchRatio: [8/36, 3/8, 3/16, 1/8] ! 2,
+			mul: 5.dbamp * c4),
+			300, db: 5, mul: -5.dbamp
 		)
 	;
-
-	o4 = Silent.ar;
 
 	outsig = SelectX.ar(Lag.kr(Mix.kr([c1, c2, c3, c4]) > -45.dbamp),[
 		Silent.ar,
@@ -128,13 +131,27 @@ SynthDef(\pshift, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 	Out.ar(out, outsig * 0.3);
 }).add;
 
+
+// -- bells
+
+SynthDef(\bells, { |in, out, pitch = 0, roll = 0|
+	var outsig = 0;
+
+	//[pitch, roll].poll;
+
+	outsig = PitchShift.ar(
+		In.ar(in, 2), pitchRatio: [0.5 + ((pi + pitch)/2pi), 0.5 + (pi/2 + roll)/(pi/2)] ! 2,
+		mul: -10.dbamp
+	);
+
+	Out.ar(out, outsig);
+}).add;
+
 // -- Playbacker
 
 SynthDef(\pb, { |out, buf|
-	Out.ar(0, PlayBuf.ar(1, buf, doneAction: 2));
+	Out.ar(out, PlayBuf.ar(1, buf, doneAction: 2));
 }).add;
-
-
 
 
 
