@@ -3,6 +3,7 @@
 // These will be used to build the Node Tree and keep track of things.
 // tree contains a list of things. If type is \group, it's group;
 // otherwise, it's the Synth's name.
+
 ~tree = [
 	(
 		type: \group,
@@ -25,7 +26,7 @@
 						type: \freqAmp, inSibling: true, params: [\freq, 1606], name: \f3
 					),
 					(
-						type: \freqAmp, inSibling: true, params: [\freq, 2032], name: \f4
+						type: \freqAmp, inSibling: true, params: [\freq, 2023], name: \f4
 					)
 				]
 			)
@@ -40,11 +41,11 @@
 				params: [\delay, 0.0, \amp, 10.dbamp]
 			),
 			(
-				type: \fork, name: \ps1,
+				type: \fork,
 				params: [\ctrl1, KTBus(\f1), \ctrl2, KTBus(\f2), \ctrl3, KTBus(\f3), \ctrl4, KTBus(\f4)]
 			),
 			(
-				type: \reverb, name: \rev, params: [\shimmerPitch, 99/100, \decayRate, 0.87]
+				type: \reverb, name: \rev, params: [\shimmerPitch, 98/99 ,\decayRate, 0.83]
 			)
 		]
 	),
@@ -85,11 +86,11 @@
 
 ~fftLength = 2.pow(8);
 s.options.memSize = 2.pow(15);
+s.options.numWireBufs = 128;
 s.waitForBoot({
 	"sdefs.sc".loadRelative;
 });
 )
-
 // After booting seve
 (
 // GUI

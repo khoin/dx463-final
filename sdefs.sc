@@ -56,7 +56,7 @@ SynthDef(\mic, { |out, amp = 1, delay = 0.5|
 // note: rq = bw / f
 // ====> bw = f * rq = e.g. 440 * 0.005 = 2 Hz
 // ====> e.g. 1220 * 0.005 = 6 Hz (Quite decent/precise bw)
-SynthDef(\freqAmp, { |in, out, freq = 440, rq = 0.008|
+SynthDef(\freqAmp, { |in, out, freq = 440, rq = 0.005|
 	var signal = Lag.kr(
 			Amplitude.kr(
 				BPF.ar(
@@ -76,6 +76,72 @@ SynthDef(\freqAmp, { |in, out, freq = 440, rq = 0.008|
 	);
 }).add;
 
+// -- Satie
+// I've decided against this because of feedback issues.
+// 1090
+// 1212
+// 1461
+// 1343
+// 1630
+// 1831
+// 2083
+// 2171
+SynthDef(\satie, { |in, out, c1 = 9, c2 = 9, c3 = 9, c4 = 9, c5 = 9, c6 = 9, c7 = 9, c8 = 9|
+	var outsig = 0;
+	// do re fa mi sol la ti do'; Satie - Chorale inappétissant
+	// first variables represent the detection of pitch (control rate)
+	// second variables represent the output.
+	var i = In.ar(in, 2);
+	var h;
+	var d, r, f, m, s, l, t, dd;
+	var od, or, of, om, os, ol, ot, odd;
+	d = In.kr(c1);
+	r = In.kr(c2);
+	f = In.kr(c3);
+	m = In.kr(c4);
+	s = In.kr(c5);
+	l = In.kr(c6);
+	t = In.kr(c7);
+	dd = In.kr(c8);
+
+	h = 2.pow([
+		[24, 0, -2, -5, -9],
+		[24, 0, -5, -9, -16],
+		[12, 0, -10, -15, -17]*2,
+		[12, 0, -4, -10, -16]*2,
+		[24, 0, -2, -7, -9],
+		[24, 0, -5, -9, -11],
+		[24, 0, -2, -7, -9],
+		[24, 0, -5, -8, -10]
+	]/12)/4;
+
+	od = PitchShift.ar(i * d, pitchRatio: h[0] ! 2);
+	or = PitchShift.ar(i * r, pitchRatio: h[1] ! 2)
+		+ DelayL.ar(PitchShift.ar(i * r, pitchRatio: 2.pow(-1/2)/4 ! 2), 0.8, 0.8, mul: 3.dbamp);
+	of = PitchShift.ar(i * f, pitchRatio: h[2] ! 2);
+	om = PitchShift.ar(i * m, pitchRatio: h[3] ! 2)
+		+ DelayL.ar(PitchShift.ar(i * m, pitchRatio: 2.pow(-9/2)/4 ! 2), 0.8, 0.8, mul: 2.dbamp);
+	os = PitchShift.ar(i * s, pitchRatio: h[4] ! 2);
+	ol = PitchShift.ar(i * l, pitchRatio: h[5] ! 2)
+		+ DelayL.ar(PitchShift.ar(i * l, pitchRatio: 2.pow(-1)/4 ! 2), 0.8, 0.8, mul: -8.dbamp);
+	ot = PitchShift.ar(i * t * -20.dbamp, pitchRatio: h[6] ! 2, mul: -5.dbamp);
+	odd = PitchShift.ar(i * dd * -20.dbamp, pitchRatio: h[7] ! 2, mul: -15.dbamp)
+	+ DelayL.ar(PitchShift.ar(i * dd, pitchRatio: 2.pow(-1)/4 ! 2), 0.8, 0.8, mul: -5.dbamp);
+
+	outsig = SelectX.ar(Lag.kr(Mix.kr([d, r, f, m, s, l, t, dd]) > -40.dbamp),[
+		Silent.ar,
+		SelectX.ar(
+			Lag.kr(ArrayMax.kr([d, r, f, m, s, l, t, dd])[1], 0.5),
+			[od, or, of, om, os, ol, ot, odd]
+		)
+	]);
+
+	outsig = HPF.ar(outsig, 120);
+
+	Out.ar(out, outsig);
+
+});
+
 // -- Fork
 SynthDef(\fork, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 
@@ -86,6 +152,9 @@ SynthDef(\fork, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 	c3 = In.kr(ctrl3);
 	c4 = In.kr(ctrl4);
 
+	m = ArrayMax.kr([c1, c2, c3, c4])[1];
+
+	// f: 813
 	o1 = BLowShelf.ar(
 			PitchShift.ar(
 				In.ar(in, 2),
@@ -95,37 +164,36 @@ SynthDef(\fork, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 		)
 	;
 
+	// f: 1204
 	o2 = Mix.ar(SinOsc.ar(1204 * [2/3, 1/4, 3/8, 3/2, 1/16],
 		c2 * In.ar(in, 2) * SinOsc.ar(1, 0, 8, 10),
 		-30.dbamp));
 
+	// f: 1606
 	o3 = BLowShelf.ar(PitchShift.ar(
 			In.ar(in, 2),
 			pitchRatio: [1/2, 5/12, 1/6, 1/9]*2 ! 2,
 			mul: 5.dbamp * c3
 	), 800, 1, 5);
 
+	// f: 2023
 	o4 = BLowShelf.ar(
 			PitchShift.ar(
 				In.ar(in, 2),
-				pitchRatio: [8/36, 3/8, 3/16, 1/8] ! 2,
+			pitchRatio: [8/36, 3/8, 3/16, 1/8] *
+			TRand.kr(0.25, 5, m >=3) *
+			EnvGen.kr(Env.perc(0.01, TRand.kr(1, 4, m >=3)), m >= 3) ! 2,
 			mul: 5.dbamp * c4),
-			300, db: 5, mul: -5.dbamp
+			300, db: -5, mul: 0.dbamp
 		)
 	;
 
 	outsig = SelectX.ar(Lag.kr(Mix.kr([c1, c2, c3, c4]) > -45.dbamp),[
 		Silent.ar,
-		SelectX.ar(Lag.kr(c1 > c2), [
-			SelectX.ar(Lag.kr(c2 > c3), [
-				SelectX.ar(Lag.kr(c3 > c4), [
-					o4,
-					o3,
-				]),
-				o2,
-			]),
-			o1
-		]);
+		SelectX.ar(
+			Lag.kr(m, 0.5),
+			[o1, o2, o3, o4]
+		)
 	]);
 
 	Out.ar(out, outsig * 0.3);
