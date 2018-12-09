@@ -40,7 +40,8 @@ Personal procedure I used for second scene:
 flute - "Hey" - flute - "Vsauce" (frozen) - flute (frozen) - 
 improvisation -
 (pitchdown - pitchup) until low rumbles are sufficiently loud with impulses -
-pitchdown to diminish all impulses
+"is there a storm?" - flute - "but what is a storm?" -
+pitchdown to diminish most violent impulses and rumbles
 ```
 
 ## Tools
