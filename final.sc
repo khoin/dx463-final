@@ -1,9 +1,6 @@
 // Boot Server
 (
-// These will be used to build the Node Tree and keep track of things.
-// tree contains a list of things. If type is \group, it's group;
-// otherwise, it's the Synth's name.
-
+// Read README.md for more info on KTree.
 ~tree = [
 	(
 		type: \group,
@@ -80,24 +77,12 @@
 	),
 	(
 		type: \group,
-		name: \testScene,
+		name: \end,
 		children: [
-			(
-				type: \group,
-				children: [
-					(
-						type: \sin, params: [\freq, 1840]
-					),
-					(
-						type: \sin, outSibling: true, params: [\freq, 1000]
-					)
-				]
-			)
+			// empty group!
 		]
 	)
 ];
-
-~fftLength = 2.pow(8);
 s.options.memSize = 2.pow(15);
 s.options.numWireBufs = 128;
 s.waitForBoot({
@@ -111,12 +96,12 @@ var winWidth			= 700,
 	winHeight			= 500,
 	win					= Window(
 		name:			"K GUI",
-		bounds:			Rect(1200, 200, winWidth, winHeight),
+		bounds:			Rect(1200, 500, winWidth, winHeight),
 	).background_(Color.grey);
 
 // Sound stuff
 var tree				= KTree(~tree);
-var audibleGroups		= [\blowey, \two, \testScene];
+var audibleGroups		= [\blowey, \two, \end];
 var fadeTime			= 1;
 var selector			= Synth.after(tree.masterGroup, \select, [
 	\in, audibleGroups.collect(tree.buses[_]),
@@ -127,13 +112,16 @@ var selector			= Synth.after(tree.masterGroup, \select, [
 // GUI + Sound stuff
 var masterAnalyzer		= Synth.after(selector, \spectro, [\in, 0]);
 var micAnalyzer			= Synth.after(selector, \spectro, [\in, tree.buses[\rawMic]]);
-var index = 0;
 
-// Function helpers
+// Function & Helpers
+var index = 0;
 var focusGroup = { |name|
 	audibleGroups.do({ |n|
 		if ( (n == name).not ) {
-			{ tree.groups[n].run(false) }.defer(fadeTime);
+			{
+				tree.groups[n].run(false);
+				(tree.groups[n].asString ++ " <" ++ n ++ "> turned off.").postln;
+			}.defer(fadeTime * 2);
 		}
 	});
 	tree.groups[name].run;
@@ -141,7 +129,7 @@ var focusGroup = { |name|
 
 // Layout
 win.layout = VLayout(
-	KSpectro([masterAnalyzer, micAnalyzer], ~fftLength, dbRange: 80),
+	KSpectro([masterAnalyzer, micAnalyzer], 2.pow(8), dbRange: 80),
 );
 
 // Event Handlers
@@ -180,7 +168,7 @@ win.view.keyDownAction = { |v, char|
 
 // Initializations
 audibleGroups.do({ |n|
-	//tree.groups[n].register(true);
+	tree.groups[n].register(true);
 });
 focusGroup.value(audibleGroups.first);
 
