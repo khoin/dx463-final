@@ -22,16 +22,17 @@ KTree {
 			synthCounter	= 0;
 
 		var recurse = { |list, parent, parentBus|
-			var previousBus = parentBus;
-			var previousGroup = nil;
+			var previousInBus = nil,
+				previousOutBus = parentBus,
+				previousGroup = nil;
 
 			list.do { |child|
 				if (child.type == \group) {
 					var group = Group.tail(parent);
-					var bus = recurse.value(child.children, group, previousBus);
+					var bus = recurse.value(child.children, group, previousOutBus);
 
 					previousGroup = group;
-					previousBus = bus;
+					previousOutBus = bus;
 
 					if (child.name == nil) {
 						buses.put(busCounter, bus);
@@ -43,20 +44,26 @@ KTree {
 						groups.put(child.name, group);
 					};
 				} {
-					var synth = Synth.tail(parent, child.type),
-						outBus = if (child.outSibling == true)
-									{previousBus} {Bus.audio(s, 2)};
+					var synth	= Synth.tail(parent, child.type),
+						outBus 	= if (child.outSibling == true)
+									{previousOutBus} {Bus.audio(s, 2)},
+						inBus	= if (child.inSibling == true)
+									{previousInBus} {previousOutBus};
 
-					synth.set(\in, previousBus);
+					synth.set(\in, inBus);
 					synth.set(\out, outBus);
 					child.params.do({ |item, i|
 						if (item.isKindOf(KTBus)) {
+							if (buses[item.name].isKindOf(Bus).not) {
+								buses.put(item.name, Bus.audio(s, 2));
+							};
 							child.params[i] = buses[item.name];
 						}
 					});
 					synth.set(*child.params);
 
-					previousBus = if (child.inSibling == true) {previousBus} {outBus};
+					previousOutBus = outBus;
+					previousInBus = inBus;
 
 					if (child.name == nil) {
 						synths.put(synthCounter, synth);
@@ -68,7 +75,7 @@ KTree {
 				};
 			};
 			// return
-			previousBus;
+			previousOutBus;
 
 		};
 		recurse.value(tree, masterGroup);

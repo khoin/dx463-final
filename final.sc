@@ -17,7 +17,7 @@
 				type: \group,
 				children: [
 					(
-						type: \freqAmp, inSibling: true, params: [\freq, 813], name: \f1
+						type: \freqAmp, params: [\freq, 813], name: \f1
 					),
 					(
 						type: \freqAmp, inSibling: true, params: [\freq, 1204], name: \f2
@@ -27,6 +27,9 @@
 					),
 					(
 						type: \freqAmp, inSibling: true, params: [\freq, 2023], name: \f4
+					),
+					(
+						type: \freqAmp, inSibling: true, params: [\freq, 2465], name: \f5
 					)
 				]
 			)
@@ -45,23 +48,33 @@
 				params: [\ctrl1, KTBus(\f1), \ctrl2, KTBus(\f2), \ctrl3, KTBus(\f3), \ctrl4, KTBus(\f4)]
 			),
 			(
-				type: \reverb, name: \rev, params: [\shimmerPitch, 98/99 ,\decayRate, 0.83]
+				type: \reverb,
+				params: [\shimmerPitch, 98/99 ,\decayRate, 0.88]
 			)
 		]
 	),
 	(
 		type: \group,
-		name: \bells,
+		name: \two,
 		children: [
 			(
 				type: \mic,
 				params: [\delay, 0.0, \amp, 10.dbamp]
 			),
 			(
-				type: \bells, name: \bell
+				type: \two,
+				params: [\gainCtrlOut, KTBus(\gainCtrl), \gainCtrl, KTBus(\f1),
+					\shimmerCtrlOut, KTBus(\shimmerCtrl), \shimmerUpCtrl, KTBus(\f4), \shimmerDownCtrl, KTBus(\f5)
+				]
 			),
 			(
-				type: \reverb, params: [\decayRate, 0.3]
+				type: \reverb, name: \freezer,
+				params: [\mix, 1, \bandwidth, 1, \decayRate, 0.999999, \processMode, 1,
+					\processGainBus, KTBus(\gainCtrl), \shimmerPitchBus, KTBus(\shimmerCtrl)
+				]
+			),
+			(
+				type: \reverb, inSibling: true, outSibling: true
 			)
 		]
 	),
@@ -73,10 +86,10 @@
 				type: \group,
 				children: [
 					(
-						type: \sin, name: \s1, params: [\freq, 1840]
+						type: \sin, params: [\freq, 1840]
 					),
 					(
-						type: \sin, name: \s2, outSibling: true, params: [\freq, 1000]
+						type: \sin, outSibling: true, params: [\freq, 1000]
 					)
 				]
 			)
@@ -93,80 +106,83 @@ s.waitForBoot({
 )
 // After booting seve
 (
-// GUI
+// GUI stuff
 var winWidth			= 700,
 	winHeight			= 500,
 	win					= Window(
 		name:			"K GUI",
 		bounds:			Rect(1200, 200, winWidth, winHeight),
 	).background_(Color.grey);
-var phone				= Canvas3D().distance_(2),
-	phoneAccel			= [0, 0, 0],
-	phonePR				= [0, 0],
-	phoneListener		;
 
+// Sound stuff
 var tree				= KTree(~tree);
+var audibleGroups		= [\blowey, \two, \testScene];
+var fadeTime			= 1;
 var selector			= Synth.after(tree.masterGroup, \select, [
-	\in, [tree.buses[\blowey], tree.buses[\bells], tree.buses[\testScene]],
-	\out, 0
+	\in, audibleGroups.collect(tree.buses[_]),
+	\out, 0,
+	\fade, fadeTime
 ]);
 
+// GUI + Sound stuff
 var masterAnalyzer		= Synth.after(selector, \spectro, [\in, 0]);
 var micAnalyzer			= Synth.after(selector, \spectro, [\in, tree.buses[\rawMic]]);
 var index = 0;
 
+// Function helpers
+var focusGroup = { |name|
+	audibleGroups.do({ |n|
+		if ( (n == name).not ) {
+			{ tree.groups[n].run(false) }.defer(fadeTime);
+		}
+	});
+	tree.groups[name].run;
+};
+
+// Layout
 win.layout = VLayout(
 	KSpectro([masterAnalyzer, micAnalyzer], ~fftLength, dbRange: 80),
-	HLayout(
-		[phone, s: 1],
-		[nil, s: 2]
-	)
 );
+
+// Event Handlers
 win.onClose				= {
 	CmdPeriod.run;
 };
 
-
-phoneListener = OSCFunc({ |msg|
-	phoneAccel = msg.copyRange(1, 3);
-
-	// Determining Roll, Pitch from accelerometer:
-	// https://stackoverflow.com/a/30195572/2076075
-	// Which based on this paper:
-	// https://www.nxp.com/files-static/sensors/doc/app_note/AN3461.pdf
-
-	// pitch: -pi to pi
-	// roll: -pi/2 to pi/2
-	phonePR[1] = (-1 * phoneAccel[0]).atan2(phoneAccel[1].hypot(phoneAccel[2]));
-	phonePR[0] = phoneAccel[1].atan2(phoneAccel[2].sign * phoneAccel[2].hypot(0.032*phoneAccel[0]));
-
-	tree.synths[\bell].set(\pitch, phonePR[0], \roll, phonePR[1]);
-}, '/accxyz', NetAddr("10.18.254.234", 8000), 9000);
-
-phone.add(Canvas3DItem.cube.transform(Canvas3D.mScale(0.4, 0.8, 0.2)));
-
-phone.animate(40, { |t|
-	phone.transforms = [
-		Canvas3D.mRotateY(phonePR[1]),
-		Canvas3D.mRotateX(pi/2 + phonePR[0])
-	];
-});
-
-win.view.keyDownAction = { |v, char|
-	if($ == char, {
-		index = index + 1;
-		selector.set(\index, index % 3);
-	});
-};
-
-
-// Event Handlers
 CmdPeriod.doOnce({
 	"Closing".postln;
 	if (win.isClosed.not, {win.close});
 	s.freeAll;
 });
 
+win.view.keyDownAction = { |v, char|
+	switch (char,
+		$ , {
+			index = (index + 1) % audibleGroups.size;
+			focusGroup.value(audibleGroups[index]);
+			selector.set(\index, index);
+			("Switched to Scene " ++ audibleGroups[index]).postln;
+		},
+		$g, {
+			"------------------".postln;
+			audibleGroups.do({ |n|
+				("Group " ++ n ++ " running: ").post;
+				tree.groups[n].isRunning.postln;
+			});
+		},
+		$b, {
+			tree.buses.keysValuesDo({ |name, id|
+				id.post; Post.tab; name.postln;
+			});
+		}
+	);
+};
+
+// Initializations
+audibleGroups.do({ |n|
+	//tree.groups[n].register(true);
+});
+focusGroup.value(audibleGroups.first);
 
 // And... Go!
 win.alwaysOnTop	= true;

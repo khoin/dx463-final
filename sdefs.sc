@@ -6,11 +6,10 @@ SynthDef(\sin, { |out = 0, freq = 440|
 }).add;
 
 // Selector
-SynthDef(\select, { |in = #[1, 1, 1, 1], index = 0, out = 0|
+SynthDef(\select, { |in = #[1, 1, 1, 1], index = 0, out = 0, fadeTime = 1|
 
-	Out.ar(out, SelectX.ar(Lag.kr(index, 0.1), In.ar(in, 2)));
+	Out.ar(out, SelectX.ar(Lag.kr(index, fadeTime), In.ar(in, 2)));
 }).add;
-
 
 // todo: multiple paths
 // --- Spectrogram Analyzer
@@ -76,72 +75,6 @@ SynthDef(\freqAmp, { |in, out, freq = 440, rq = 0.005|
 	);
 }).add;
 
-// -- Satie
-// I've decided against this because of feedback issues.
-// 1090
-// 1212
-// 1461
-// 1343
-// 1630
-// 1831
-// 2083
-// 2171
-SynthDef(\satie, { |in, out, c1 = 9, c2 = 9, c3 = 9, c4 = 9, c5 = 9, c6 = 9, c7 = 9, c8 = 9|
-	var outsig = 0;
-	// do re fa mi sol la ti do'; Satie - Chorale inappétissant
-	// first variables represent the detection of pitch (control rate)
-	// second variables represent the output.
-	var i = In.ar(in, 2);
-	var h;
-	var d, r, f, m, s, l, t, dd;
-	var od, or, of, om, os, ol, ot, odd;
-	d = In.kr(c1);
-	r = In.kr(c2);
-	f = In.kr(c3);
-	m = In.kr(c4);
-	s = In.kr(c5);
-	l = In.kr(c6);
-	t = In.kr(c7);
-	dd = In.kr(c8);
-
-	h = 2.pow([
-		[24, 0, -2, -5, -9],
-		[24, 0, -5, -9, -16],
-		[12, 0, -10, -15, -17]*2,
-		[12, 0, -4, -10, -16]*2,
-		[24, 0, -2, -7, -9],
-		[24, 0, -5, -9, -11],
-		[24, 0, -2, -7, -9],
-		[24, 0, -5, -8, -10]
-	]/12)/4;
-
-	od = PitchShift.ar(i * d, pitchRatio: h[0] ! 2);
-	or = PitchShift.ar(i * r, pitchRatio: h[1] ! 2)
-		+ DelayL.ar(PitchShift.ar(i * r, pitchRatio: 2.pow(-1/2)/4 ! 2), 0.8, 0.8, mul: 3.dbamp);
-	of = PitchShift.ar(i * f, pitchRatio: h[2] ! 2);
-	om = PitchShift.ar(i * m, pitchRatio: h[3] ! 2)
-		+ DelayL.ar(PitchShift.ar(i * m, pitchRatio: 2.pow(-9/2)/4 ! 2), 0.8, 0.8, mul: 2.dbamp);
-	os = PitchShift.ar(i * s, pitchRatio: h[4] ! 2);
-	ol = PitchShift.ar(i * l, pitchRatio: h[5] ! 2)
-		+ DelayL.ar(PitchShift.ar(i * l, pitchRatio: 2.pow(-1)/4 ! 2), 0.8, 0.8, mul: -8.dbamp);
-	ot = PitchShift.ar(i * t * -20.dbamp, pitchRatio: h[6] ! 2, mul: -5.dbamp);
-	odd = PitchShift.ar(i * dd * -20.dbamp, pitchRatio: h[7] ! 2, mul: -15.dbamp)
-	+ DelayL.ar(PitchShift.ar(i * dd, pitchRatio: 2.pow(-1)/4 ! 2), 0.8, 0.8, mul: -5.dbamp);
-
-	outsig = SelectX.ar(Lag.kr(Mix.kr([d, r, f, m, s, l, t, dd]) > -40.dbamp),[
-		Silent.ar,
-		SelectX.ar(
-			Lag.kr(ArrayMax.kr([d, r, f, m, s, l, t, dd])[1], 0.5),
-			[od, or, of, om, os, ol, ot, odd]
-		)
-	]);
-
-	outsig = HPF.ar(outsig, 120);
-
-	Out.ar(out, outsig);
-
-});
-
 // -- Fork
 SynthDef(\fork, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 
@@ -177,16 +110,15 @@ SynthDef(\fork, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 	), 800, 1, 5);
 
 	// f: 2023
-	o4 = BLowShelf.ar(
+	o4 = In.ar(in, 2) * -60.dbamp + DelayL.ar(BLowShelf.ar(
 			PitchShift.ar(
 				In.ar(in, 2),
 			pitchRatio: [8/36, 3/8, 3/16, 1/8] *
-			TRand.kr(0.25, 5, m >=3) *
-			EnvGen.kr(Env.perc(0.01, TRand.kr(1, 4, m >=3)), m >= 3) ! 2,
+			TRand.kr(0.5, 5, m >=3) *
+			EnvGen.kr(Env.perc(0.01, TRand.kr(1, 4, m >=3)), m >= 3, levelBias: 0.5) ! 2,
 			mul: 5.dbamp * c4),
 			300, db: -5, mul: 0.dbamp
-		)
-	;
+	), 0.2, 0.2);
 
 	outsig = SelectX.ar(Lag.kr(Mix.kr([c1, c2, c3, c4]) > -45.dbamp),[
 		Silent.ar,
@@ -199,38 +131,34 @@ SynthDef(\fork, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 	Out.ar(out, outsig * 0.3);
 }).add;
 
+SynthDef(\two, { |in, out, gainCtrlOut = 99, gainCtrl = 99, shimmerDownCtrl = 99, shimmerUpCtrl = 99, shimmerCtrlOut = 99|
+	var outsig = Silent.ar;
 
-// -- bells
+	outsig = In.ar(in, 2) * -30.dbamp;
 
-SynthDef(\bells, { |in, out, pitch = 0, roll = 0|
-	var outsig = 0;
-
-	//[pitch, roll].poll;
-
-	outsig = PitchShift.ar(
-		In.ar(in, 2), pitchRatio: [0.5 + ((pi + pitch)/2pi), 0.5 + (pi/2 + roll)/(pi/2)] ! 2,
-		mul: -10.dbamp
-	);
-
+	Out.kr(gainCtrlOut, DelayN.kr((In.kr(gainCtrl) > -30.dbamp), 1, 1));
+	Out.kr(shimmerCtrlOut,
+		DelayN.kr(
+			1
+			- (0.2 * (In.kr(shimmerDownCtrl) > -30.dbamp))
+			+ (0.2 * (In.kr(shimmerUpCtrl) > -30.dbamp))
+			, 1, 1));
 	Out.ar(out, outsig);
 }).add;
 
-// -- Playbacker
-
-SynthDef(\pb, { |out, buf|
-	Out.ar(out, PlayBuf.ar(1, buf, doneAction: 2));
-}).add;
-
-
-
-
-
-
-
-// REVERB
-
+// Datorro REVERB
+// Implemented https://ccrma.stanford.edu/~dattorro/EffectDesignPart1.pdf
 SynthDef(\reverb, {
-	arg in = 99, gain = 0, mix = 0.35, preDelay = 0.001, bandwidth = 0.998, tailDensity = 0.7, decayRate = 0.9, damping = 0.0005, excursionDepth = 0.2, excursionRate = 2, shimmerPitch = 1, out = 0, processGain = 0;
+	arg in = 99,
+		processMode = 0, // 0 uses Control values, 1 uses Bus for any param suffix Bus.
+		gain = 0, mix = 0.35,
+		processGain = 0, processGainBus = 99,
+		preDelay = 0.001, bandwidth = 0.998,
+		decayRate = 0.9, decayRateBus = 99,
+		tailDensity = 0.7, damping = 0.0005,
+		excursionDepth = 0.2, excursionRate = 2,
+		shimmerPitch = 1, shimmerPitchBus = 99,
+		out = 0;
 
 	// funcs
 	var sampleRate		= Server.default.sampleRate;
@@ -249,13 +177,14 @@ SynthDef(\reverb, {
 
 	};
 	// some constant values
-	var dattorroSampRate = 29761;
+	// dSR = datorroSampleRate, sampleRate used in the paper.
+	var dSR = 29761;
 	var maxExcursion    = 32; // samples
 
 	// values for prep part
 	var preTankVals = [
 		[0.75, 0.75, 0.625, 0.625], // gFacs
-		sampSec.value([142, 107, 379, 277], dattorroSampRate) // times
+		sampSec.value([142, 107, 379, 277], dSR) // times
 	].flop;
 
 	// values for tank part
@@ -263,17 +192,17 @@ SynthDef(\reverb, {
 	// I do that here so I don't worry about the signs later.
 	var tankAP1GFac = -1 * tailDensity;
 	var tankAP1Time = 672;
-	var tankDel1    = sampSec.value(4453, dattorroSampRate);
+	var tankDel1    = sampSec.value(4453, dSR);
 	var tankAP2GFac = (decayRate + 0.15).min(0.5).max(0.25);
-	var tankAP2Time = sampSec.value(1800, dattorroSampRate);
-	var tankDel2    = sampSec.value(3720, dattorroSampRate);
+	var tankAP2Time = sampSec.value(1800, dSR);
+	var tankDel2    = sampSec.value(3720, dSR);
 
 	var tankAP3GFac = tankAP1GFac;
 	var tankAP3Time = 908;
-	var tankDel3    = sampSec.value(4217, dattorroSampRate);
+	var tankDel3    = sampSec.value(4217, dSR);
 	var tankAP4GFac = tankAP2GFac;
-	var tankAP4Time = sampSec.value(2656, dattorroSampRate);
-	var tankDel4    = sampSec.value(3163, dattorroSampRate);
+	var tankAP4Time = sampSec.value(2656, dSR);
+	var tankDel4    = sampSec.value(3163, dSR);
 
 	// Signals
 	var dry     = In.ar(in, 2);
@@ -284,6 +213,10 @@ SynthDef(\reverb, {
 	var wet     = Silent.ar;
 	var outs    = Silent.ar;
 
+	// Params
+	var pGain = Select.kr(processMode, [processGain.dbamp, Lag.kr(In.kr(processGainBus), 0.05)]);
+	var sPitch = Select.kr(processMode, [shimmerPitch, Lag.kr(In.kr(shimmerPitchBus), 0.05)]);
+
 	var fback;
 
 	var dryAmp, wetAmp;
@@ -293,11 +226,12 @@ SynthDef(\reverb, {
 	damping = (damping + (1 + (8 * damping))).log / (10.log); // somewhat better than linear
 	bandwidth = 3.pow(bandwidth) - (1 + bandwidth);
 
+
 	// ROUTINGS
 	// make it mono
 	preTank = (dry[0] + dry[1]) / 2;
 	// pregain
-	preTank = preTank * processGain.dbamp;
+	preTank = preTank * pGain;
 	// predelay
 	preTank = DelayC.ar(preTank, preDelay, preDelay);
 	// lowpass
@@ -313,15 +247,15 @@ SynthDef(\reverb, {
 	// // Tank starts here
 	// first branch
 	tank  = AllpassC.ar(preTank + (decayRate * fback),
-		maxdelaytime: sampSec.value(tankAP1Time + maxExcursion, dattorroSampRate),
-		delaytime: sampSec.value(tankAP1Time, dattorroSampRate)
-		+ (sampSec.value(maxExcursion, dattorroSampRate) * excursionDepth * SinOsc.ar(excursionRate)),
-		decaytime: gFacT60.value(sampSec.value(tankAP1Time, dattorroSampRate), tankAP1GFac)
+		maxdelaytime: sampSec.value(tankAP1Time + maxExcursion, dSR),
+		delaytime: sampSec.value(tankAP1Time, dSR)
+		+ (sampSec.value(maxExcursion, dSR) * excursionDepth * SinOsc.ar(excursionRate)),
+		decaytime: gFacT60.value(sampSec.value(tankAP1Time, dSR), tankAP1GFac)
 	);
 
-	     wetL = -0.6 * DelayC.ar(tank, sampSec.value(1990, dattorroSampRate), sampSec.value(1990, dattorroSampRate)) + wetL;
+	     wetL = -0.6 * DelayC.ar(tank, sampSec.value(1990, dSR), sampSec.value(1990, dSR)) + wetL;
 	     wetR = 0.6 * tank + wetR;
-	     wetR = 0.6 * DelayC.ar(tank, sampSec.value(3300, dattorroSampRate), sampSec.value(3300, dattorroSampRate)) + wetR;
+	     wetR = 0.6 * DelayC.ar(tank, sampSec.value(3300, dSR), sampSec.value(3300, dSR)) + wetR;
 	tank = DelayC.ar(tank, tankDel1, tankDel1);
 	tank = LPF.ar(tank, sampleRate / 2 * (1 - damping)) * decayRate;
 	     wetL = -0.6 * tank + wetL;
@@ -332,31 +266,32 @@ SynthDef(\reverb, {
 
 	// // second branch
 	tank  = AllpassC.ar((tank * decayRate) + preTank,
-		maxdelaytime: sampSec.value(tankAP3Time + maxExcursion, dattorroSampRate),
-		delaytime: sampSec.value(tankAP3Time, dattorroSampRate)
-		+ (sampSec.value(maxExcursion, dattorroSampRate) * excursionDepth * 0.8 * SinOsc.ar(excursionRate * 0.8)),
-		decaytime: gFacT60.value(sampSec.value(tankAP3Time, dattorroSampRate), tankAP3GFac)
+		maxdelaytime: sampSec.value(tankAP3Time + maxExcursion, dSR),
+		delaytime: sampSec.value(tankAP3Time, dSR)
+		+ (sampSec.value(maxExcursion, dSR) * excursionDepth * 0.8 * SinOsc.ar(excursionRate * 0.8)),
+		decaytime: gFacT60.value(sampSec.value(tankAP3Time, dSR), tankAP3GFac)
 	);
 
 	     wetL = 0.6 * tank + wetL;
-	     wetL = 0.6 * DelayC.ar(tank, sampSec.value(2700, dattorroSampRate), sampSec.value(2700, dattorroSampRate)) + wetL;
-	     wetR = -0.6 * DelayC.ar(tank, sampSec.value(2100, dattorroSampRate), sampSec.value(2100, dattorroSampRate)) + wetR;
+	     wetL = 0.6 * DelayC.ar(tank, sampSec.value(2700, dSR), sampSec.value(2700, dSR)) + wetL;
+	     wetR = -0.6 * DelayC.ar(tank, sampSec.value(2100, dSR), sampSec.value(2100, dSR)) + wetR;
 	tank = DelayC.ar(tank, tankDel3, tankDel3);
 	tank = LPF.ar(tank, sampleRate / 2 * (1 - damping)) * decayRate;
 	tank = AllpassC.ar(tank, tankAP4Time, tankAP4Time, gFacT60.value(tankAP4Time, tankAP4GFac));
 	     wetL = -0.6 * tank + wetL;
-	     wetR = -0.6 * DelayC.ar(tank, sampSec.value(200, dattorroSampRate), sampSec.value(200, dattorroSampRate)) + wetR;
+	     wetR = -0.6 * DelayC.ar(tank, sampSec.value(200, dSR), sampSec.value(200, dSR)) + wetR;
 
 	tank = DelayC.ar(tank, tankDel4, tankDel4);
 	     wetL = 0.6 * tank + wetL;
 
 	tank = tank * decayRate;
 	// // Sloppy Shimmering
-	tank = PitchShift.ar(tank, pitchRatio: shimmerPitch);
+	tank = PitchShift.ar(tank, pitchRatio: sPitch, mul: Select.kr(sPitch > 1, [1, 2.dbamp]));
 	// // Tank ends here
 	LocalOut.ar(tank);
 
     wet = [wetL, wetR];
+	wet = HPF.ar(wet, 40); // Prevent lows from blowing up.
 
 	outs = (dry * dryAmp) + (wet * wetAmp);
 	outs = outs * gain.dbamp;
