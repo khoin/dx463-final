@@ -47,7 +47,7 @@ The reason for "vsauce" is because there are many "ess" sounds.
 
 ### Recording
 
-I performed this on 2018/12/11 with my recorder. 
+I performed this on 2018/12/11 with my recorder at DXARTS, University of Washington. There were problems regarding the performing space differing from composing space. I had troubles with the fourth note and its effects triggering other effect chains. In the full version, you can hear that I struggled with a reverb feedback in the second scene.
 
 [Full (6'54'')](https://soundcloud.com/potasmic/dxarts-463-final-full)
 
@@ -101,7 +101,7 @@ There is also a class called `KTBus`, which you can use to refer to any _named_ 
 
 `KTree` does _not_ route to default output bus (0) for you. You need an auxilary Synth to do that. For this project, I have `\selector`, which selects different output buses of the three groups to bus 0.
 
-_Note: I'm documenting using the term `node`, which might be confused with the class `Node`; they are not, but `IdentityDictionary`. However, since these nodes refer to the Nodes on the server, I've chose to remain using the term._
+_Note: I'm documenting using the term `node`, which might be confused with the class `Node`; they are not, but `IdentityDictionary`. However, since these nodes refer to the Nodes on the server, I chose to remain using the term._
 
 #### Caveats, TODOS
 
@@ -120,6 +120,10 @@ An implementation of the Dattorro reverb [[2]] is included in `sdefs.sc`. It has
 
 [1]: https://www.fredrikolofsson.com/f0blog/node/345
 [2]: https://ccrma.stanford.edu/~dattorro/EffectDesignPart1.pdf
+
+## To-do's?
+
+There is no motivation for executing the Todos I've listed above. You are free to submit a Pull Request.
 
 ## License
 
