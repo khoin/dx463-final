@@ -1,17 +1,15 @@
 // THIS FILE WILL BE LOADED IN FINAL.sc
 
-// Ultimate Test Sin
+// Ultimate test Sin, everyone needs it.
 SynthDef(\sin, { |out = 0, freq = 440|
 	Out.ar(out, 0.1!2 * SinOsc.ar(Lag.kr(freq)));
 }).add;
 
 // Selector
 SynthDef(\select, { |in = #[1, 1, 1, 1], index = 0, out = 0, fadeTime = 1|
-
 	Out.ar(out, SelectX.ar(Lag.kr(index, fadeTime), In.ar(in, 2)));
 }).add;
 
-// todo: multiple paths
 // --- Spectrogram Analyzer
 // When `t_trigger` is triggered,
 // a trigger message will be sent (from server) to the client
@@ -51,10 +49,10 @@ SynthDef(\mic, { |out, amp = 1, delay = 0.5|
 	);
 }).add;
 
-// -- Amplitude Tracker
+// --- Amplitude Tracker
 // note: rq = bw / f
 // ====> bw = f * rq = e.g. 440 * 0.005 = 2 Hz
-// ====> e.g. 1220 * 0.005 = 6 Hz (Quite decent/precise bw)
+// ====> e.g. 1220 * 0.005 = 6 Hz (Quite decent bw between accuracy and tolerance)
 SynthDef(\freqAmp, { |in, out, freq = 440, rq = 0.005|
 	var signal = Lag.kr(
 			Amplitude.kr(
@@ -75,7 +73,7 @@ SynthDef(\freqAmp, { |in, out, freq = 440, rq = 0.005|
 	);
 }).add;
 
-// -- Fork
+// --- Fork
 SynthDef(\fork, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 
 	var outsig = 0;
@@ -131,6 +129,7 @@ SynthDef(\fork, { |in, out, ctrl1 = 99, ctrl2 = 99, ctrl3 = 99, ctrl4 = 99|
 	Out.ar(out, outsig * 0.3);
 }).add;
 
+// --- Two
 SynthDef(\two, { |in, out, gainCtrlOut = 99, gainCtrl = 99, shimmerDownCtrl = 99, shimmerUpCtrl = 99, shimmerCtrlOut = 99|
 	var outsig = Silent.ar;
 

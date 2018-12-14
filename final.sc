@@ -129,11 +129,11 @@ var focusGroup = { |name|
 
 // Layout
 win.layout = VLayout(
-	KSpectro([masterAnalyzer, micAnalyzer], 2.pow(8), dbRange: 80),
+	KSpectro([masterAnalyzer, micAnalyzer], ~fftLength, dbRange: 80),
 );
 
 // Event Handlers
-win.onClose				= {
+win.onClose	= {
 	CmdPeriod.run;
 };
 

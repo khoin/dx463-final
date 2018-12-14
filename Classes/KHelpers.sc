@@ -14,16 +14,10 @@ KMap {
 	}
 }
 
-
-// Displays a spectrum analyzer a given ugen.
-// Also displays band amplitudes
-// This is an ad-hoc spectrum view. It's not intended for
-// modular usage. However, it conforms with Layout views.
-
 KSpectro {
 	const logFac = 20;
 
-	var ugens,
+	var synths,
 		fftSize,
 		dbRange;
 
@@ -33,8 +27,8 @@ KSpectro {
 		freqDict,
 		freqOSCFunc;
 
-	*new { | ugen, fftSize, dbRange|
-		^super.newCopyArgs(ugen, fftSize, dbRange).init;
+	*new { | synth, fftSize, dbRange|
+		^super.newCopyArgs(synth, fftSize, dbRange).init;
 	}
 
 	init {
@@ -129,7 +123,7 @@ KSpectro {
 			});
 
 			// Ask the analyzer for FFT Result.
-			ugens.do(_.set(\t_trigger, 1));
+			synths.do(_.set(\t_trigger, 1));
 		}
 	}
 }
