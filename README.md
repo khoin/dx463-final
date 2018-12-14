@@ -63,7 +63,7 @@ There are a few tools resulting from this project. I'm unsure if it will coopera
 
 KSpectro, the class, implements `.asView`, and therefore is compatible with `Window.layout`. It must be use in conjunction with the `\spectro` SynthDef defined in `sdefs.sc`, but you can implement your own SynthDef such that it sends an OSC message back to the client at /spectro in this format: `[nodeID, binNumber, magnitude]`; a simple way is to use SendReply UGen.
 
-The SynthDef is implemented after Fedrick Olofsson f0 [[1]][1], although I believe there must be a better way than sending each bin's value as separate OSC messages.
+The SynthDef is implemented after Fedrick Olofsson f0 [[1]], although I believe there must be a better way than sending each bin's value as separate OSC messages.
 
 ```supercollider
 // KSpectro takes in an array of synths to trigger (demand new FFT), fftSize, and dbRange
@@ -111,7 +111,7 @@ _Note: I'm documenting using the term `node`, which might be confused with the c
 
 ### Dattorro Reverb
 
-An implementation of the Dattorro reverb [[2]][2] is included in `sdefs.sc`. It has some modification such as the pitchshift in the tank.
+An implementation of the Dattorro reverb [[2]] is included in `sdefs.sc`. It has some modification such as the pitchshift in the tank.
 
 ## References
 
