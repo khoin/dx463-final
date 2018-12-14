@@ -12,8 +12,7 @@ This project requires the UGen ArrayMax, which is not included in this repositor
 In /Classes/, these are the classes required for this project to work. You need to [install](http://doc.sccode.org/Guides/UsingExtensions.html) these classes for the project to work.
 
 ### Set-Up
-In `final.sc`, in `~tree` variable, change the frequencies `\freq` and the gains `\amp` to better match your instrument. 
-
+In `final.sc`, in `~tree` variable, change the frequencies `\freq` and the gains `\amp` to better match your instrument. Run the first code block to assign the `~tree`, then run the second code block to start the project with GUI.
 
 ## Score
 
@@ -44,21 +43,74 @@ improvisation -
 pitchdown to diminish most violent impulses and rumbles
 ```
 
+The reason for "vsauce" is because there are many "ess" sounds.
+
+### Recording
+
+I performed this on 2018/12/11 with my recorder. 
+
+[Full (6'54'')](https://soundcloud.com/potasmic/dxarts-463-final-full)
+
+[Submitted Excerpt (3'52'')](https://soundcloud.com/potasmic/dxarts-463-final)
+
 ## Tools
 
 There are a few tools resulting from this project. I'm unsure if it will cooperate well with the rest of the ecosystem of SuperCollider but they work well for specific projects that don't require certain tasks. 
 
 ### KSpectro
 
-to be written
+![KSpectro screenshot](imgs/gui.png)
+
+KSpectro, the class, implements `.asView`, and therefore is compatible with `Window.layout`. It must be use in conjunction with the `\spectro` SynthDef defined in `sdefs.sc`, but you can implement your own SynthDef such that it sends an OSC message back to the client at /spectro in this format: `[nodeID, binNumber, magnitude]`; a simple way is to use SendReply Ugen.
+
+The SynthDef is implemented after Fedrick Olofsson f0 [1][1], although I believe there must be a better way than sending each bin's value as separate OSC messages.
+
+```supercollider
+// KSpectro takes in an array of synths to trigger (demand new FFT), fftSize, and dbRange
+
+KSpectro([masterAnalyzer, micAnalyzer], ~fftLength, dbRange: 80);
+// returns a View
+```
+
+You can have as many \spectro synths as you like, I tried two. Each analyzer should be displayed as a different color in the viewer.
 
 ### KTree
 
-to be written
+How I organize groups, synths and buses for live performances, or projects that do not require the use of notes. 
+
+`KTree` takes in one argument, which is a tree. This tree can has many root nodes. Each nodes are [IdentityDictionaries](http://doc.sccode.org/Classes/IdentityDictionary.html) which can have these four properties/keys:
+
+* **type**: \group or SynthDef name
+* **name**: (optional) A name to refer to this node.
+* **children**: (optional) An array of nodes.
+* **params**:(optional) Array of parameters for Synth if type is not \group
+* **inSibling**: Boolean. For Synths only. If true, this Synth shares the same input as the previous sibling synth in the tree.
+* **outSibling**: Boolean. For Synths only. If true, this Synth writes to the same output as the previous sibling synth in the tree.
+
+`KTree`, when instantiated, will build a Group/Node structure you've just specified on to the server as a child of Group 0.
+
+`KTree`, when instantiated, will return an IdentityDictionary with keys `masterGroup`, `buses`, `groups`, and `synths`. The last three contain Dictionaries with all the buses, groups and synths. If a synth node is named `\example`, then `tree.buses[\example]` refers to the output bus; if it's a group node `\exampleGroup`, then `tree.buses[\exampleGroup]` refers to the output bus of the last children of the group.
+
+Setting `\in`, `\out` in a synth's node `param` will override KTree's internal bussing structure. 
+
+There is also a class called `KTBus`, which you can use to refer to any _named_ node's output bus that has been declared previous in the tree, if such Bus does not exist, it will create new Bus. The `~tree` in `final.sc` should give you a sense of it.
+
+_Note: I'm documenting using the term `node`, which might be confused with the class `Node`; they are not, but `IdentityDictionary`. However, since these nodes refer to the Nodes on the server, I've chose to remain using the term._
+
+#### Caveats, TODOS
+
+* Allow for different parent Group, rather than Group 0. `KTree(Event, Node)`
+* Changing the tree after build. Allow for an instance of `KTree` to change, afterwhich you can call `.build` to re-build the tree on the Server. 
+* If your Synth is terminated (e.g., calling `.release`), you will have to replace the Synth yourself. This can be tricky, especially if you don't name your nodes and need to route appropriate i/o buses.
 
 ### Datorro Reverb
 
-An implementation of the Datorro reverb (cite) is included in `sdefs.sc`. It has some modification such as the pitchshift in the tank.
+An implementation of the Datorro reverb [2][2] is included in `sdefs.sc`. It has some modification such as the pitchshift in the tank.
+
+## References
+
+[1]: https://www.fredrikolofsson.com/f0blog/node/345
+[2]: https://ccrma.stanford.edu/~dattorro/EffectDesignPart1.pdf
 
 ## License
 
