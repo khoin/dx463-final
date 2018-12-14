@@ -2,7 +2,7 @@
 
 _For woodwind, voice and live electronics_
 
-This is my project for DXARTS 463. An overview of the project is given below
+This is my project for DXARTS 463. Below, I will first give suggestions for the performance, then I will go into the different tools that was built for this project.
 
 ## Requirements & Set-Up
 

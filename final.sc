@@ -1,4 +1,3 @@
-// Boot Server
 (
 // Read README.md for more info on KTree.
 ~tree = [
@@ -83,7 +82,8 @@
 		]
 	)
 ];
-s.options.memSize = 2.pow(15);
+~fftLength = 2.pow(8);
+s.options.memSize = 2.pow(17);
 s.options.numWireBufs = 128;
 s.waitForBoot({
 	"sdefs.sc".loadRelative;
